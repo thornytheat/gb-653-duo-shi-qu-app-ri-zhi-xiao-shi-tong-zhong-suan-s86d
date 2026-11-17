@@ -10,10 +10,12 @@
 - M4 小时分桶：`/api/buckets/rebuild`
 - M5 迟到修订：`/api/watermark/advance`
 - M6 批次对账：`/api/export/buckets.csv`
+- M7 修订交付：`/api/delivery/revise` `/api/delivery/claim` `/api/delivery/confirm`
 
         ## 核心规则
 
         事件先归一到 UTC，DST 重叠时保留 fold；小时桶右端开，水位只能前进且迟到事件仍进入修订。
+        修订交付按(小时, 服务)保存基线与增量：领取凭回执确认，未确认重领原件，后续变化另记补偿，过期回执拒绝。
 
         ## 启动
 

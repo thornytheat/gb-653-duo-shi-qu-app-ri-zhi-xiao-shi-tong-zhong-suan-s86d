@@ -14,6 +14,7 @@
 | M4 小时分桶 | 运行样例并复核证据 | `/api/buckets/rebuild` / `/buckets` | `app/modules/m4_buckets/core.py` `app/modules/m4_buckets/service.py` | `tests/test_m4_buckets.py` |
 | M5 迟到修订 | 运行样例并复核证据 | `/api/watermark/advance` / `/watermark` | `app/modules/m5_watermark/core.py` `app/modules/m5_watermark/service.py` | `tests/test_m5_watermark.py` |
 | M6 批次对账 | 运行样例并复核证据 | `/api/export/buckets.csv` / `/runs` | `app/modules/m6_runs/core.py` `app/modules/m6_runs/service.py` | `tests/test_m6_runs.py` |
+| M7 修订交付 | 登记修订、领取增量、凭回执确认并核对 | `/api/delivery/revise` `/api/delivery/claim` `/api/delivery/confirm` / `/delivery` | `app/modules/m7_delivery/core.py` `app/modules/m7_delivery/store.py` | `tests/test_m7_delivery.py` |
 
         ## 陷阱登记
 
@@ -29,12 +30,16 @@
 | TRAP-14 | 真实边界输入 | 朴素处理会错分 | 保留证据并稳定裁决 | `app/modules/m2_time/core.py` | `tests/test_m2_time.py::test_trap_2` |
 | TRAP-16 | 真实边界输入 | 朴素处理会错分 | 保留证据并稳定裁决 | `app/modules/m3_events/core.py` | `tests/test_m3_events.py::test_trap_2` |
 | TRAP-23 | 真实边界输入 | 朴素处理会错分 | 保留证据并稳定裁决 | `app/modules/m4_buckets/core.py` | `tests/test_m4_buckets.py::test_trap_2` |
+| TRAP-26 | 已领取未确认的增量被后续修订覆盖 | 回执内容失真 | 增量内容不可变，后续变化另记补偿增量 | `app/modules/m7_delivery/store.py` | `tests/test_m7_delivery.py::test_claimed_delta_keeps_original_and_revision_becomes_compensation` |
+| TRAP-27 | 并发领取同一增量 | 下游重复累加 | 单事务领取加守卫更新，租约过期才可重领 | `app/modules/m7_delivery/store.py` | `tests/test_m7_delivery.py::test_concurrent_claims_no_double_occupancy` |
+| TRAP-28 | 确认重试或中途重启 | 基线重复累计或丢失 | 回执幂等重放，确认与基线同事务落定 | `app/modules/m7_delivery/store.py` | `tests/test_m7_delivery.py::test_restart_recovery` |
 
         ## 对账规则
 
         - 输入记录数 = 有效记录数 + 隔离记录数 + 空记录数。
         - 核心数值或事件数在转换、判定和导出之间保持守恒。
         - 同一输入摘要重跑复用原运行编号，不增加结果行。
+        - 已确认基线 + 在途(待领取+待确认)增量 = 当前桶；差额由 `/api/delivery/reconcile` 逐键核对。
 
         ## 已知不覆盖
 

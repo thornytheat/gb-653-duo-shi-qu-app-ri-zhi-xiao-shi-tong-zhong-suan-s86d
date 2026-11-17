@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% block content %}
+<div class="grid module-7"><section class="panel panel--primary"><div class="panel__head"><h2>交付状态回读</h2><span class="panel__meta">M7 · {{ data.status|default('READY') }}</span></div><div class="panel__body panel__body--scroll"><table class="ledger"><thead><tr><th>小时</th><th>服务</th><th>当前桶</th><th>已确认基线</th><th>待领取</th><th>待确认</th><th>已确认</th></tr></thead><tbody>{% for key in data["keys"] %}<tr><td>{{ key.hour }}</td><td>{{ key.service }}</td><td class="num">{% if key.current %}{{ key.current.count }}/{{ key.current.errors }}{% else %}-{% endif %}</td><td class="num">{{ key.baseline.count }}/{{ key.baseline.errors }}</td><td class="num">{{ key.counts.pending }}</td><td class="num">{{ key.counts.claimed }}</td><td class="num">{{ key.counts.confirmed }}</td></tr>{% endfor %}</tbody></table></div></section>
+<div class="stack"><section class="panel"><div class="panel__head"><h2>原因码</h2><span class="panel__meta">{{ data.reason|default('OK') }}</span></div><div class="panel__body bars"><i style="--v:65%"></i><i style="--v:50%"></i></div></section><section class="panel"><div class="panel__head"><h2>本次动作</h2><span class="panel__meta">/api/delivery/*</span></div><div class="panel__body"><button class="btn btn--primary" id="m7-revise">登记 迟到修订</button><button class="btn" id="m7-claim">领取 增量</button><button class="btn" id="m7-confirm">确认 回执</button><pre class="result">等待运行</pre></div></section></div></div>
+<script>
+(function(){
+  const out=document.querySelector(".result");
+  async function post(url,body){const res=await fetch(url,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})});return res.text()}
+  document.getElementById("m7-revise")?.addEventListener("click",async()=>{out.textContent=await post("/api/delivery/revise")});
+  document.getElementById("m7-claim")?.addEventListener("click",async()=>{const text=await post("/api/delivery/claim");out.textContent=text;try{const data=JSON.parse(text);if(data.receipt_id)sessionStorage.setItem("m7_receipt",data.receipt_id)}catch(e){}});
+  document.getElementById("m7-confirm")?.addEventListener("click",async()=>{out.textContent=await post("/api/delivery/confirm",{receipt_id:sessionStorage.getItem("m7_receipt")||""})});
+})();
+</script>
+{% endblock %}
